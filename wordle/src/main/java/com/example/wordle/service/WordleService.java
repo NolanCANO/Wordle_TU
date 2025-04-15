@@ -28,11 +28,6 @@ public class WordleService {
         }
     }
 
-    /**
-     * Démarre une nouvelle partie avec paramètres avancés (longueur et mode).
-     * @param length     longueur du mot (ex. 5, 6, 7...)
-     * @param modeChoice mode de jeu (1=standard, 2=chrono, 3=pratique, etc.)
-     */
     public WordleGame startNewGame(int length, int modeChoice) {
         // Filtrer le dictionnaire pour obtenir uniquement des mots de la longueur souhaitée
         List<String> filteredDict = fullDictionary.stream()
@@ -53,11 +48,11 @@ public class WordleService {
 
         // Configuration des essais / chrono selon le mode
         switch (modeChoice) {
-            case 2: // Chronométré (exemple)
+            case 2: // Chronométré
                 game.setRemainingAttempts(6);
-                game.setTimeLimitSeconds(60); // par exemple 60s
+                game.setTimeLimitSeconds(60);
                 break;
-            case 3: // Pratique (exemple)
+            case 3: // Pratique
                 game.setRemainingAttempts(10);
                 break;
             case 1: // Standard
@@ -150,4 +145,27 @@ public class WordleService {
 
         return String.join("", resultArray);
     }
+
+    public int getMinWordLength() {
+        if (fullDictionary.isEmpty()) {
+            throw new IllegalStateException("Le dictionnaire est vide.");
+        }
+        // On trouve la longueur minimale
+        return fullDictionary.stream()
+                             .mapToInt(String::length)
+                             .min()
+                             .orElseThrow(() -> new IllegalStateException("Aucun mot trouvé."));
+    }
+    
+    public int getMaxWordLength() {
+        if (fullDictionary.isEmpty()) {
+            throw new IllegalStateException("Le dictionnaire est vide.");
+        }
+        // On trouve la longueur maximale
+        return fullDictionary.stream()
+                             .mapToInt(String::length)
+                             .max()
+                             .orElseThrow(() -> new IllegalStateException("Aucun mot trouvé."));
+    }
+    
 }

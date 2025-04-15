@@ -13,22 +13,12 @@ public class WordleGame {
     private boolean isGameOver = false;
     private boolean isWon = false;
     private List<String> guesses = new ArrayList<>();
-
     private int wordLength = 5;
-    private int mode = 1; // Mode de jeu (1=standard, 2=chronométré, 3=pratique, etc.)
-
-    // Limite de temps en secondes
-    private int timeLimitSeconds = 0;
-
-    /**
-     * Temps de début de la partie (en millisecondes).
-     * Utilisé pour calculer le temps écoulé en mode chronométré.
-     */
+    private int mode = 1; // Mode de jeu (1=standard, 2=chronométré, 3=pratique, etc.) 
+    private int timeLimitSeconds = 0; // Limite de temps en secondes
     private long startTimeMillis = System.currentTimeMillis();
 
-    /**
-     * Indique si le temps est écoulé (mode chrono).
-     */
+    //Indique si le temps est écoulé (mode chrono)
     public boolean isTimeUp() {
         if (timeLimitSeconds <= 0) {
             return false; 
@@ -36,9 +26,7 @@ public class WordleGame {
         return getElapsedTimeSeconds() >= timeLimitSeconds;
     }
 
-    /**
-     * Renvoie le temps écoulé depuis le début de la partie (en secondes).
-     */
+    //Renvoie le temps écoulé depuis le début de la partie (en secondes)
     public long getElapsedTimeSeconds() {
         return (System.currentTimeMillis() - startTimeMillis) / 1000;
     }
