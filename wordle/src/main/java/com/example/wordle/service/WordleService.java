@@ -2,22 +2,26 @@ package com.example.wordle.service;
 
 import com.example.wordle.model.GameStats;
 import com.example.wordle.model.WordleGame;
+import com.example.wordle.repository.GameStatsRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PostConstruct;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
+@Service
 public class WordleService {
 
     private final List<String> fullDictionary; // Dictionnaire complet
-    private final GameStats stats = new GameStats(); // Statistiques du joueur
+    private GameStats stats; // Statistiques du joueur
+
+    @Autowired
+    private GameStatsRepository statsRepository;
 
     public WordleService() {
         try (BufferedReader reader = new BufferedReader(
@@ -31,6 +35,20 @@ public class WordleService {
         }
     }
 
+    // Chargement ou création des stats persistées
+    @PostConstruct
+    public void initStats() {
+        Optional<GameStats> optional = statsRepository.findAll().stream().findFirst();
+        if (optional.isPresent()) {
+            this.stats = optional.get();
+        } else {
+            this.stats = new GameStats();
+            statsRepository.save(this.stats);
+        }
+    }
+
+
+    // Initialise une nouvelle partie avec la longueur de mot et le mode donné
     public WordleGame startNewGame(int length, int modeChoice) {
         // Filtrer le dictionnaire pour obtenir uniquement des mots de la longueur souhaitée
         List<String> filteredDict = fullDictionary.stream()
@@ -66,12 +84,12 @@ public class WordleService {
         return game;
     }
 
-    //Version basique (5 lettres, mode standard).
+    // Version basique (5 lettres, mode standard).
     public WordleGame startNewGame() {
         return startNewGame(5, 1);
     }
 
-    //Valide et analyse le mot proposé par le joueur.
+    // Valide et analyse le mot proposé par le joueur.
     public String checkGuess(WordleGame game, String guess) {
         int length = game.getWordLength();
 
@@ -134,16 +152,19 @@ public class WordleService {
             game.setGameOver(true);
             updateScore(game);
             stats.updateFromGame(game);
+            statsRepository.save(stats);
         } else if (game.getRemainingAttempts() == 0) {
             // Partie perdue
             game.setGameOver(true);
             updateScore(game);
             stats.updateFromGame(game);
+            statsRepository.save(stats);
         }
 
         return String.join("", resultArray);
     }
 
+    // Calcule un score simple en fonction du nombre d'essais utilisés et du temps restant
     public void updateScore(WordleGame game) {
         int baseScore = 1000;
         int usedAttempts = game.getGuesses().size();
@@ -160,30 +181,30 @@ public class WordleService {
         game.setScore(Math.max(score, 0));
     }
 
+    // Retourne les statistiques actuelles (mémoire)
     public GameStats getStats() {
         return stats;
     }
 
+    // Trouve la longueur minimale d'un mot du dictionnaire
     public int getMinWordLength() {
         if (fullDictionary.isEmpty()) {
             throw new IllegalStateException("Le dictionnaire est vide.");
         }
-        // On trouve la longueur minimale
         return fullDictionary.stream()
                              .mapToInt(String::length)
                              .min()
                              .orElseThrow(() -> new IllegalStateException("Aucun mot trouvé."));
     }
-    
+
+    // Trouve la longueur maximale d'un mot du dictionnaire
     public int getMaxWordLength() {
         if (fullDictionary.isEmpty()) {
             throw new IllegalStateException("Le dictionnaire est vide.");
         }
-        // On trouve la longueur maximale
         return fullDictionary.stream()
                              .mapToInt(String::length)
                              .max()
                              .orElseThrow(() -> new IllegalStateException("Aucun mot trouvé."));
     }
-    
 }

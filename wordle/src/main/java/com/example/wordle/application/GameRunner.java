@@ -3,13 +3,21 @@ package com.example.wordle.application;
 import com.example.wordle.model.GameStats;
 import com.example.wordle.model.WordleGame;
 import com.example.wordle.service.WordleService;
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ConfigurableApplicationContext;
+
 import java.util.Scanner;
 
 public class GameRunner {
 
     public static void main(String[] args) {
+        // Lance le contexte Spring
+        ConfigurableApplicationContext context = SpringApplication.run(WordleApplication.class, args);
+
+        // Récupère WordleService à partir du contexte Spring
+        WordleService wordleService = context.getBean(WordleService.class);
+
         try (Scanner scanner = new Scanner(System.in)) {
-            WordleService wordleService = new WordleService();
 
             // Récupère la longueur min et max du dictionnaire
             int minLen = wordleService.getMinWordLength();
@@ -25,7 +33,7 @@ public class GameRunner {
                     int val = Integer.parseInt(input);
                     if (val < minLen || val > maxLen) {
                         System.out.println("Longueur invalide. Veuillez saisir un entier entre "
-                                        + minLen + " et " + maxLen + ".");
+                                + minLen + " et " + maxLen + ".");
                     } else {
                         wordLength = val;
                     }
@@ -75,8 +83,7 @@ public class GameRunner {
                         // Si on est arrivé ici, c'est qu'il n'y a plus d'essais
                         System.out.println("Perdu ! Le mot était : " + game.getTargetWord());
                     }
-                }
-                catch (IllegalStateException e) {
+                } catch (IllegalStateException e) {
                     // On gère ici l'exception "Temps écoulé !" 
                     if ("Temps écoulé !".equals(e.getMessage())) {
                         System.out.println("Temps écoulé !");
@@ -88,12 +95,11 @@ public class GameRunner {
                         // Si c’est une autre IllegalStateException, on la relance
                         throw e;
                     }
-                }
-                catch (IllegalArgumentException e) {
+                } catch (IllegalArgumentException e) {
                     System.out.println(e.getMessage());
                 }
             }
-            
+
             // Afficher le score de la partie
             System.out.println("Score de cette partie : " + game.getScore());
 
@@ -104,9 +110,12 @@ public class GameRunner {
             System.out.println("Série actuelle : " + stats.getCurrentStreak());
             System.out.println("Meilleure série: " + stats.getBestStreak());
             System.out.printf("Tentatives moyennes : %.2f%n", stats.getAverageAttempts());
-
+            System.out.printf("Score moyen       : %.2f%n", stats.getAverageScore());
             System.out.println("=== Fin de la partie ===");
         }
+
+        // Ferme proprement le contexte Spring
+        context.close();
     }
 
     private static String getModeName(int choice) {
