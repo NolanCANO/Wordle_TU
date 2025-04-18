@@ -1,14 +1,16 @@
 package com.example.wordle;
 
+import com.example.wordle.model.GameStats;
 import com.example.wordle.model.WordleGame;
 import com.example.wordle.service.WordleService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
+import com.example.wordle.repository.GameStatsRepository;
+import org.mockito.Mockito;
 import static org.junit.jupiter.api.Assertions.*;
-
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.List;
 
 class WordleServiceTest {
 
@@ -16,8 +18,18 @@ class WordleServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new WordleService();
+        GameStatsRepository mockRepo = Mockito.mock(GameStatsRepository.class);
+
+        // Simule un GameStats vide pour que l'init fonctionne sans erreur
+        List<GameStats> statsList = new ArrayList<>();
+        statsList.add(new GameStats());
+        Mockito.when(mockRepo.findAll()).thenReturn(statsList);
+        Mockito.when(mockRepo.save(Mockito.any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service = new WordleService(mockRepo);
     }
+
+
 
     // Vérifie qu'une erreur est lancée si la longueur de mot n'existe pas dans le dictionnaire.
     @Test

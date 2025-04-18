@@ -3,11 +3,9 @@ package com.example.wordle.service;
 import com.example.wordle.model.GameStats;
 import com.example.wordle.model.WordleGame;
 import com.example.wordle.repository.GameStatsRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.PostConstruct;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -18,12 +16,14 @@ import java.util.stream.Collectors;
 public class WordleService {
 
     private final List<String> fullDictionary; // Dictionnaire complet
+    private final GameStatsRepository statsRepository; // Accès BDD
     private GameStats stats; // Statistiques du joueur
 
-    @Autowired
-    private GameStatsRepository statsRepository;
+    // Constructeur avec injection du repository
+    public WordleService(GameStatsRepository statsRepository) {
+        this.statsRepository = statsRepository;
 
-    public WordleService() {
+        // Chargement du dictionnaire à partir du fichier
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(new ClassPathResource("listeMots.txt").getInputStream()))
         ) {
@@ -33,11 +33,8 @@ public class WordleService {
         } catch (IOException e) {
             throw new RuntimeException("Impossible de charger les mots", e);
         }
-    }
 
-    // Chargement ou création des stats persistées
-    @PostConstruct
-    public void initStats() {
+        // Chargement ou création des stats persistées
         Optional<GameStats> optional = statsRepository.findAll().stream().findFirst();
         if (optional.isPresent()) {
             this.stats = optional.get();
@@ -46,7 +43,6 @@ public class WordleService {
             statsRepository.save(this.stats);
         }
     }
-
 
     // Initialise une nouvelle partie avec la longueur de mot et le mode donné
     public WordleGame startNewGame(int length, int modeChoice) {
@@ -181,7 +177,7 @@ public class WordleService {
         game.setScore(Math.max(score, 0));
     }
 
-    // Retourne les statistiques actuelles (mémoire)
+    // Retourne les statistiques actuelles (persistées)
     public GameStats getStats() {
         return stats;
     }
@@ -192,9 +188,9 @@ public class WordleService {
             throw new IllegalStateException("Le dictionnaire est vide.");
         }
         return fullDictionary.stream()
-                             .mapToInt(String::length)
-                             .min()
-                             .orElseThrow(() -> new IllegalStateException("Aucun mot trouvé."));
+                .mapToInt(String::length)
+                .min()
+                .orElseThrow(() -> new IllegalStateException("Aucun mot trouvé."));
     }
 
     // Trouve la longueur maximale d'un mot du dictionnaire
@@ -203,8 +199,8 @@ public class WordleService {
             throw new IllegalStateException("Le dictionnaire est vide.");
         }
         return fullDictionary.stream()
-                             .mapToInt(String::length)
-                             .max()
-                             .orElseThrow(() -> new IllegalStateException("Aucun mot trouvé."));
+                .mapToInt(String::length)
+                .max()
+                .orElseThrow(() -> new IllegalStateException("Aucun mot trouvé."));
     }
 }
