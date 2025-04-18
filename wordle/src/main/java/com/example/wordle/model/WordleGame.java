@@ -14,6 +14,7 @@ public class WordleGame {
     private boolean isWon = false;
     private List<String> guesses = new ArrayList<>();
     private int wordLength = 5;
+    private int score = 0;
     private int mode = 1; // Mode de jeu (1=standard, 2=chronométré, 3=pratique, etc.) 
     private int timeLimitSeconds = 0; // Limite de temps en secondes
     private long startTimeMillis = System.currentTimeMillis();

@@ -1,11 +1,13 @@
 package com.example.wordle.service;
 
+import com.example.wordle.model.GameStats;
 import com.example.wordle.model.WordleGame;
 import org.springframework.core.io.ClassPathResource;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +17,7 @@ import java.util.stream.Collectors;
 public class WordleService {
 
     private final List<String> fullDictionary; // Dictionnaire complet
+    private final GameStats stats = new GameStats(); // Statistiques du joueur
 
     public WordleService() {
         try (BufferedReader reader = new BufferedReader(
@@ -63,16 +66,12 @@ public class WordleService {
         return game;
     }
 
-    /**
-     * Version basique (5 lettres, mode standard).
-     */
+    //Version basique (5 lettres, mode standard).
     public WordleGame startNewGame() {
         return startNewGame(5, 1);
     }
 
-    /**
-     * Valide et analyse le mot proposé par le joueur.
-     */
+    //Valide et analyse le mot proposé par le joueur.
     public String checkGuess(WordleGame game, String guess) {
         int length = game.getWordLength();
 
@@ -99,7 +98,7 @@ public class WordleService {
         // Tableau de résultat (par ex. "[X]", "[O]", "[_]")
         String[] resultArray = new String[length];
 
-        // 1er passage : repérer les [X] (lettres exactes) et décrémenter la fréquence
+        // 1er passage : repérer les [X] (lettres exactes)
         for (int i = 0; i < length; i++) {
             char g = guess.charAt(i);
             char t = target.charAt(i);
@@ -126,24 +125,43 @@ public class WordleService {
         game.setRemainingAttempts(game.getRemainingAttempts() - 1);
         game.getGuesses().add(guess);
 
-        // Check victoire
-        boolean allCorrect = true;
-        for (String symbol : resultArray) {
-            if (!"[X]".equals(symbol)) {
-                allCorrect = false;
-                break;
-            }
-        }
+        // Vérification si toutes les lettres sont correctes
+        boolean allCorrect = Arrays.stream(resultArray).allMatch("[X]"::equals);
+
         if (allCorrect) {
+            // Partie gagnée
             game.setWon(true);
             game.setGameOver(true);
-        }
-        // Check défaite
-        else if (game.getRemainingAttempts() == 0) {
+            updateScore(game);
+            stats.updateFromGame(game);
+        } else if (game.getRemainingAttempts() == 0) {
+            // Partie perdue
             game.setGameOver(true);
+            updateScore(game);
+            stats.updateFromGame(game);
         }
 
         return String.join("", resultArray);
+    }
+
+    public void updateScore(WordleGame game) {
+        int baseScore = 1000;
+        int usedAttempts = game.getGuesses().size();
+        int attemptsPenalty = (usedAttempts - 1) * 100;
+        int score = baseScore - attemptsPenalty;
+
+        if (game.getMode() == 2 && game.isWon()) {
+            long timeLeft = game.getTimeLimitSeconds() - game.getElapsedTimeSeconds();
+            if (timeLeft > 0) {
+                score += timeLeft * 5;
+            }
+        }
+
+        game.setScore(Math.max(score, 0));
+    }
+
+    public GameStats getStats() {
+        return stats;
     }
 
     public int getMinWordLength() {

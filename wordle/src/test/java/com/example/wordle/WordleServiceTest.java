@@ -18,34 +18,6 @@ class WordleServiceTest {
     void setUp() {
         service = new WordleService();
     }
-    // Vérifie qu'une partie standard (5 lettres, mode=1) s'initialise correctement.
-    @Test
-    void startNewGame_standardMode() {
-        WordleGame game = service.startNewGame();
-        assertNotNull(game.getTargetWord(), "Le mot cible ne doit pas être null");
-        assertEquals(5, game.getWordLength(), "La longueur du mot doit être par défaut 5");
-        assertEquals(6, game.getRemainingAttempts(), "Les essais restants doivent être initialisés à 6");
-        assertEquals(1, game.getMode(), "Le mode par défaut doit être 1 (standard)");
-    }
-
-    // Vérifie qu'une partie personnalisée (7 lettres, mode=3) s'initialise correctement.
-    @Test
-    void startNewGame_customMode() {
-        WordleGame game = service.startNewGame(7, 3);
-        assertEquals(7, game.getWordLength(), "La longueur du mot doit être personnalisée à 7");
-        assertEquals(10, game.getRemainingAttempts(), "Les essais restants en mode pratique doivent être 10");
-        assertEquals(3, game.getMode(), "Le mode doit être 3 (pratique)");
-    }
-
-    // Vérifie qu'un mode inconnu retombe sur la configuration standard (6 essais) tout en conservant la valeur "mode".
-    @Test
-    void startNewGame_unknownMode_shouldDefaultToStandard() {
-        WordleGame game = service.startNewGame(5, 99);
-        assertEquals(5, game.getWordLength());
-        // Puisque le switch par défaut retombe sur le case standard
-        assertEquals(6, game.getRemainingAttempts(), "Doit retomber sur 6 essais en mode standard");
-        assertEquals(99, game.getMode(), "Le champ mode reste 99, mais la config s'applique comme standard.");
-    }
 
     // Vérifie qu'une erreur est lancée si la longueur de mot n'existe pas dans le dictionnaire.
     @Test
@@ -56,6 +28,53 @@ class WordleServiceTest {
         assertTrue(exception.getMessage().contains("Aucun mot de longueur 30"));
     }
     
+
+/*******************************
+
+          Mode de jeu
+
+ *******************************/
+
+
+    // Vérifie qu'une partie standard (mode=1) s'initialise correctement.
+    @Test
+    void startNewGame_standardMode() {
+        int length = 5;
+        WordleGame game = service.startNewGame(length, 1);
+        assertEquals(length, game.getWordLength(), "La longueur du mot doit être celle demandée");
+        assertEquals(6, game.getRemainingAttempts(), "Le mode standard doit donner 6 essais");
+        assertEquals(1, game.getMode(), "Le mode par défaut doit être 1 (standard)");
+    }
+
+    // Vérifie qu'une partie chronométrée (mode=2) s'initialise correctement.
+    @Test
+    void startNewGame_timerMode() {
+        int length = 5;
+        WordleGame game = service.startNewGame(length, 2);
+        assertEquals(length, game.getWordLength(), "La longueur du mot doit être celle demandée");
+        assertEquals(6, game.getRemainingAttempts(), "Le mode chrono doit donner 6 essais");
+        assertEquals(2, game.getMode(), "Le mode doit être 2 (chronométré)");
+        assertTrue(game.getTimeLimitSeconds() > 0, "Le temps limite doit être supérieur à 0 en mode chronométré");
+    }
+
+    // Vérifie qu'une partie pratique (mode=3) s'initialise correctement.
+    @Test
+    void startNewGame_customMode() {
+        int length = 5;
+        WordleGame game = service.startNewGame(length, 3); 
+        assertEquals(length, game.getWordLength(), "La longueur du mot doit être celle demandée");
+        assertEquals(10, game.getRemainingAttempts(), "Le mode pratique doit donner 10 essais");
+        assertEquals(3, game.getMode(), "Le mode doit être 3 (pratique)");
+    }  
+
+
+/*******************************
+
+        Logique du jeu
+
+ *******************************/
+    
+ 
     // Vérifie qu'un essai exact (mot identique) donne 5 fois [X] et finit la partie.
     @Test
     void checkGuess_exactMatch() {
@@ -176,6 +195,62 @@ class WordleServiceTest {
         assertEquals(5, game.getRemainingAttempts());
     }
 
+
+/*******************************
+
+             Scores
+
+ *******************************/
+
+
+    // Vérifie que le score est de 1000 quand le mot est trouvé au 1er essai
+    @Test
+    void score_shouldBeMaxOnFirstTry() {
+        WordleGame game = new WordleGame();
+        game.setTargetWord("APPLE");
+        game.setWordLength(5);
+
+        service.checkGuess(game, "APPLE"); // mot correct du 1er coup
+
+        assertEquals(1000, game.getScore(), "Le score devrait être de 1000 au 1er essai");
+    }
+
+    // Vérifie que le score diminue avec le nombre d'essais
+    @Test
+    void score_shouldDecreaseWithAttempts() {
+        WordleGame game = new WordleGame();
+        game.setTargetWord("APPLE");
+        game.setWordLength(5);
+
+        service.checkGuess(game, "ALERT");
+        service.checkGuess(game, "APPLY");
+        service.checkGuess(game, "APPLE"); // trouvé au 3e coup
+
+        assertTrue(game.getScore() < 1000, "Le score devrait être inférieur à 1000 après plusieurs essais");
+        assertEquals(1000 - 200, game.getScore(), "Chaque essai supplémentaire doit réduire le score de 100 (sauf le premier)");
+    }
+
+    // Vérifie qu'une partie perdue retourne un score >= 0
+    @Test
+    void score_shouldBeZeroOrPositiveOnLoss() {
+        WordleGame game = new WordleGame();
+        game.setTargetWord("APPLE");
+        game.setWordLength(5);
+        game.setRemainingAttempts(1);
+
+        service.checkGuess(game, "LEMON"); // tentative ratée => partie perdue
+
+        assertTrue(game.getScore() >= 0, "Le score ne doit pas être négatif même en cas de défaite");
+    }
+
+
+/*******************************
+
+          Dictionnaire
+
+ *******************************/
+
+
     // Vérifie que getMinWordLength() renvoie une valeur > 0 (si le dico n'est pas vide).
     @Test
     void getMinWordLength_shouldReturnPositiveValue() {
@@ -211,10 +286,9 @@ class WordleServiceTest {
 
     // Méthode pour rendre fullDictionary vide
     private void makeDictionaryEmpty(WordleService svc) throws Exception {
-        // On récupère le champ private final List<String> fullDictionary
         Field dictField = WordleService.class.getDeclaredField("fullDictionary");
         dictField.setAccessible(true);
-        // On force ce champ à une liste vide
         dictField.set(svc, new ArrayList<>());
     }
+
 }

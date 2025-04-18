@@ -1,5 +1,6 @@
 package com.example.wordle.application;
 
+import com.example.wordle.model.GameStats;
 import com.example.wordle.model.WordleGame;
 import com.example.wordle.service.WordleService;
 import java.util.Scanner;
@@ -10,7 +11,7 @@ public class GameRunner {
         try (Scanner scanner = new Scanner(System.in)) {
             WordleService wordleService = new WordleService();
 
-             // Récupère la longueur min et max du dictionnaire
+            // Récupère la longueur min et max du dictionnaire
             int minLen = wordleService.getMinWordLength();
             int maxLen = wordleService.getMaxWordLength();
 
@@ -92,6 +93,18 @@ public class GameRunner {
                     System.out.println(e.getMessage());
                 }
             }
+            
+            // Afficher le score de la partie
+            System.out.println("Score de cette partie : " + game.getScore());
+
+            GameStats stats = wordleService.getStats();
+            System.out.println("\n=== Statistiques ===");
+            System.out.println("Parties jouées : " + stats.getTotalGames());
+            System.out.println("Victoires      : " + stats.getWins());
+            System.out.println("Série actuelle : " + stats.getCurrentStreak());
+            System.out.println("Meilleure série: " + stats.getBestStreak());
+            System.out.printf("Tentatives moyennes : %.2f%n", stats.getAverageAttempts());
+
             System.out.println("=== Fin de la partie ===");
         }
     }
