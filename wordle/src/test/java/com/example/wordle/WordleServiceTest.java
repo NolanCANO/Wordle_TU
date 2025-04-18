@@ -210,9 +210,47 @@ class WordleServiceTest {
 
 /*******************************
 
-             Scores
+        Scores et stats
 
  *******************************/
+
+
+    // Vérifie que les stats ne sont pas nulles.
+    @Test
+    void getStats_shouldNotBeNull() {
+        GameStats stats = service.getStats();
+        assertNotNull(stats, "Les stats ne doivent pas être nulles");
+    }
+
+    // Vérifie que le constructeur initialise un nouvel objet GameStats si aucun n'est trouvé dans le repository
+    @Test
+    void constructor_shouldCreateNewStatsIfNonePresent() {
+        GameStatsRepository mockRepo = Mockito.mock(GameStatsRepository.class);
+        Mockito.when(mockRepo.findAll()).thenReturn(List.of()); // vide
+        Mockito.when(mockRepo.save(Mockito.any())).thenAnswer(inv -> inv.getArgument(0));
+
+        WordleService svc = new WordleService(mockRepo);
+        assertNotNull(svc.getStats(), "Les stats devraient être initialisées même si la BDD est vide");
+    }
+
+    // Vérifie que getAverageAttempts() retourne la bonne moyenne des tentatives
+    @Test
+    void getAverageAttempts_shouldReturnCorrectAverage() {
+        GameStats stats = new GameStats();
+        stats.setTotalAttempts(12);
+        stats.setTotalGames(3);
+        assertEquals(4.0, stats.getAverageAttempts(), 0.01);
+    }
+
+    // Vérifie que getAverageScore() retourne la bonne moyenne du score
+    @Test
+    void getAverageScore_shouldReturnCorrectAverage() {
+        GameStats stats = new GameStats();
+        stats.setTotalScore(1500);
+        stats.setTotalGames(3);
+        assertEquals(500.0, stats.getAverageScore(), 0.01);
+    }
+
 
 
     // Vérifie que le score est de 1000 quand le mot est trouvé au 1er essai
@@ -254,6 +292,40 @@ class WordleServiceTest {
 
         assertTrue(game.getScore() >= 0, "Le score ne doit pas être négatif même en cas de défaite");
     }
+
+    // Vérifie que le score est boosté par le temps restant en mode chrono
+    @Test
+    void checkGuess_winInChronoMode_shouldAddBonus() {
+        WordleGame game = new WordleGame();
+        game.setTargetWord("APPLE");
+        game.setWordLength(5);
+        game.setMode(2);
+        game.setTimeLimitSeconds(60);
+        game.setStartTimeMillis(System.currentTimeMillis());
+
+        service.checkGuess(game, "APPLE");
+
+        assertTrue(game.getScore() > 1000, "Le score devrait être boosté par le temps restant en mode chrono");
+    }
+
+    // Vérifie que le score n'est pas boosté si la partie est perdue en mode chrono
+    @Test
+    void updateScore_shouldNotAddBonusIfNotWon() {
+        WordleGame game = new WordleGame();
+        game.setTargetWord("APPLE");
+        game.setWordLength(5);
+        game.setMode(2); // chrono mode
+        game.setTimeLimitSeconds(60);
+        game.setStartTimeMillis(System.currentTimeMillis());
+
+        // Mauvais mot
+        game.setRemainingAttempts(1);
+        service.checkGuess(game, "LEMON");
+
+        assertTrue(game.getScore() <= 1000, "Pas de bonus si la partie est perdue");
+    }
+
+
 
 
 /*******************************
